@@ -33,7 +33,7 @@ export default function App() {
         try {
             const { data, error } = await supabase.auth.signInWithOAuth({
                 provider: "google",
-                options: { redirectTo: "http://localhost:3000" }
+                options: { redirectTo: window.location.origin }
             });
             if (error) console.error("Login error:", error.message);
         } catch (err) {
