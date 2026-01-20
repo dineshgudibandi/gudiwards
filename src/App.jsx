@@ -1,16 +1,15 @@
 import { useEffect, useState } from "react";
-import {ParentDashboard} from "./components/parent/ParentDashboard";
-import {Header} from "./components/layout/Header";
-import {KidDashboard} from "./components/kid/KidDashboard";
-import {KidTabs} from "./components/kid/KidTabs";
-import {supabase} from "./supabase";
-import {Home} from "./components/layout/Home";
+import { ParentDashboard } from "./components/parent/ParentDashboard";
+import { Header } from "./components/layout/Header";
+import { KidDashboard } from "./components/kid/KidDashboard";
+import { KidTabs } from "./components/kid/KidTabs";
+import { supabase } from "./supabase";
+import { Home } from "./components/layout/Home";
 
 export default function App() {
     const [user, setUser] = useState(null);
-    const [family, setFamily] = useState(null);
     const [members, setMembers] = useState([]);
-    const [role, setRole] = useState("kid");
+    const [role, setRole] = useState("user");
     const [kids, setKids] = useState([]);
     const [selectedKid, setSelectedKid] = useState(null);
     const [userEmail, setUserEmail] = useState("");
@@ -40,46 +39,53 @@ export default function App() {
             console.error("Unexpected error during Google login:", err);
         }
     }
+
     async function loadFamilies(user) {
         const { data } = await supabase
-            .from("families")
-            .select("*")
+            .from("family_members")
+            .select("*, families(*)")
             .eq("user_id", user.id);
 
-        if (!data) return;
+        if (!data || data.length === 0) return;
 
-        setFamilies(data)
-        if (data.length > 0) {
-            setSelectedFamily(data[0]);
-            loadMembers(data[0].id);
-            loadKids(data[0].id);
+        const uniqueFamilies = data.map(fm => fm.families).filter(f => f != null);
+        setFamilies(uniqueFamilies);
+        if (uniqueFamilies.length > 0) {
+            setSelectedFamily(uniqueFamilies[0]);
+            loadMembers(uniqueFamilies[0].id);
+            loadKids(uniqueFamilies[0].id);
         }
     }
+
     async function loadMembers(familyId) {
+        if (!familyId) return;
         const { data: mems } = await supabase
             .from("family_members")
             .select("*")
             .eq("family_id", familyId);
         setMembers(mems || []);
     }
+
     async function loadKids(familyId) {
+        if (!familyId) return;
         const { data } = await supabase.from("kids").select("*").eq("family_id", familyId);
         setKids(data || []);
         if (!selectedKid && data?.length) setSelectedKid(data[0]);
     }
 
     async function createFamilyGroup() {
-        if (!newGroupName) { alert("Please enter a group name."); return; }
-        // Ensure user can insert by RLS policy
+        if (!newGroupName || !user) { alert("Please enter a group name and ensure you are logged in."); return; }
         const { data, error } = await supabase.from('families')
-            .insert({ name: newGroupName, user_id: user.id }) // owner_id must match RLS policy
+            .insert({ name: newGroupName, owner_id: user.id })
             .select()
             .maybeSingle();
         if (error) { console.error(error); alert("Failed to create group. Check RLS policies."); return; }
+        if (!data) return;
+
         setFamilies([...families, data]);
         setSelectedFamily(data);
         setNewGroupName("");
-        // Add current user as family member
+
         const { error: memberError } = await supabase.from('family_members').insert({
             family_id: data.id,
             user_id: user.id,
@@ -101,33 +107,34 @@ export default function App() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 p-6">
             <div className="max-w-4xl mx-auto space-y-6">
-                <Header role={role} setRole={setRole} members={members} />
+                <Header role={role} setRole={setRole} members={members} kids={kids.length} />
                 <p className="text-gray-700">Welcome {userEmail}</p>
-                {role === "parent" ? (
+                {role === "parent" && selectedFamily ? (
                     <ParentDashboard family={selectedFamily} user_id={user.id} />
-                ) : selectedKid && role === 'kid' ? (
+                ) : role === 'kid' && selectedKid ? (
                     <>
                         <KidTabs kids={kids} selectedKid={selectedKid} setSelectedKid={setSelectedKid} />
-                        <KidDashboard kid={selectedKid} />
+                        <KidDashboard kid={selectedKid} family={selectedFamily} />
                     </>
                 ) : (
-
                     <div className="mb-4">
-                    <h2 className="font-semibold mb-2">Your Groups:</h2>
+                        <h2 className="font-semibold mb-2">Your Groups:</h2>
                         { families.length > 0 && <div className="flex gap-2 overflow-x-auto">
-                {families.map(f => (
-                    <button
-                    key={f.id}
-                className={`px-4 py-2 rounded-full font-semibold ${selectedFamily?.id === f.id ? 'bg-indigo-600 text-white' : 'bg-white text-indigo-600 shadow'}`}
-                onClick={() => {
-                    setSelectedFamily(f);
-                    setRole('parent')
-                }}
-            >
-                {f.name}
-            </button>
-            ))}
-        </div> }
+                            {families.map(f => (
+                                <button
+                                    key={f.id}
+                                    className={`px-4 py-2 rounded-full font-semibold ${selectedFamily?.id === f.id ? 'bg-indigo-600 text-white' : 'bg-white text-indigo-600 shadow'}`}
+                                    onClick={() => {
+                                        setSelectedFamily(f);
+                                        setRole('parent');
+                                        loadMembers(f.id);
+                                        loadKids(f.id);
+                                    }}
+                                >
+                                    {f.name}
+                                </button>
+                            ))}
+                        </div> }
                         <input
                             type="text"
                             value={newGroupName}
@@ -138,7 +145,7 @@ export default function App() {
                         <button onClick={createFamilyGroup} className="btn-primary">
                             Create Family Group
                         </button>
-</div>
+                    </div>
                 )}
             </div>
         </div>

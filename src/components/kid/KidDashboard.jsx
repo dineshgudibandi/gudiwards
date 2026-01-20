@@ -5,7 +5,7 @@ import {FaCoins} from "react-icons/fa";
 import {Card} from "../shared/Card";
 import {supabase} from "../../supabase";
 
-export function KidDashboard({ kid }) {
+export function KidDashboard({ kid, family }) {
     const [chores, setChores] = useState([]);
     const [rewards, setRewards] = useState([]);
     const [coins, setCoins] = useState(0);
@@ -21,8 +21,8 @@ export function KidDashboard({ kid }) {
     async function load() {
         const today = new Date().toISOString().split("T")[0];
 
-        const { data: choresData } = await supabase.from("chores").select("*");
-        const { data: rewardsData } = await supabase.from("rewards").select("*");
+        const { data: choresData } = await supabase.from("chores").select("*").eq("family_id",family.id);
+        const { data: rewardsData } = await supabase.from("rewards").select("*").eq("family_id",family.id);
         const { data: completions } = await supabase.from("chore_completions").select("*").eq("kid_id", kid.id);
 
         const updatedChores = (choresData || []).map(ch => {

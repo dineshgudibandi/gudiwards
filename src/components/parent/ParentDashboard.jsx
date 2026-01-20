@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {Card} from "../shared/Card";
 import {supabase} from "../../supabase";
-import {FaCoins} from "react-icons/fa";
+import {FaCoins, FaEdit, FaSave} from "react-icons/fa";
 
 export function ParentDashboard({ family, user_id }) {
     const [chores, setChores] = useState([]);
@@ -12,20 +12,33 @@ export function ParentDashboard({ family, user_id }) {
     const [choreCoins, setChoreCoins] = useState(5);
     const [daily, setDaily] = useState(true);
 
+    const [kids, setKids] = useState([]);
+    const [newKidName, setNewKidName] = useState("");
+
     const [rewardTitle, setRewardTitle] = useState("");
     const [rewardCoins, setRewardCoins] = useState(5);
 
-    const [kids, setKids] = useState([]);
-    const [newKidName, setNewKidName] = useState("");
+    const [editingChoreId, setEditingChoreId] = useState(null);
+    const [editingRewardId, setEditingRewardId] = useState(null);
+    const [editingKidId, setEditingKidId] = useState(null);
+
+    const [editChoreTitle, setEditChoreTitle] = useState("");
+    const [editChoreCoins, setEditChoreCoins] = useState(0);
+
+    const [editRewardTitle, setEditRewardTitle] = useState("");
+    const [editRewardCoins, setEditRewardCoins] = useState(0);
+
+    const [editKidName, setEditKidName] = useState("");
+
 
     useEffect(() => {
         load();
     }, []);
 
     async function load() {
-        const { data: c } = await supabase.from("chores").select("*");
-        const { data: r } = await supabase.from("rewards").select("*");
-        const { data: k } = await supabase.from("kids").select("*");
+        const { data: c } = await supabase.from("chores").select("*").eq("family_id",family.id);
+        const { data: r } = await supabase.from("rewards").select("*").eq("family_id",family.id);
+        const { data: k } = await supabase.from("kids").select("*").eq("family_id",family.id);
         const { data: cc } = await supabase.from("chore_completions").select("*, chores(*), kids(*)").eq("approved", false);
         const { data: red } = await supabase.from("redemptions").select("*, rewards(*), kids(*)").eq("approved", false);
 
@@ -41,6 +54,7 @@ export function ParentDashboard({ family, user_id }) {
         await supabase.from("chores").insert({
             title: choreTitle,
             coins: choreCoins,
+            family_id: family.id,
             is_daily: daily
         });
         setChoreTitle("");
@@ -53,7 +67,8 @@ export function ParentDashboard({ family, user_id }) {
         if (!rewardTitle) return;
         await supabase.from("rewards").insert({
             title: rewardTitle,
-            cost: rewardCoins
+            cost: rewardCoins,
+            family_id: family.id
         });
         setRewardTitle("");
         setRewardCoins(5);
@@ -93,44 +108,92 @@ export function ParentDashboard({ family, user_id }) {
         await supabase.from("redemptions").delete().eq("id", id);
         await load();
     }
+    async function updateChore(choreId) {
+        await supabase.from("chores").update({ title: editChoreTitle, coins: editChoreCoins }).eq("id", choreId);
+        setEditingChoreId(null);
+        await load();
+    }
 
+    async function updateReward(rewardId) {
+        await supabase.from("rewards").update({ title: editRewardTitle, cost: editRewardCoins }).eq("id", rewardId);
+        setEditingRewardId(null);
+        await load();
+    }
+
+    async function updateKid(kidId) {
+        await supabase.from("kids").update({ name: editKidName }).eq("id", kidId);
+        setEditingKidId(null);
+        await load();
+    }
     return (
         <div className="grid md:grid-cols-2 gap-6">
             <h3>{family.name}</h3>
             <Card>
-                <h2 className="text-xl font-bold mb-4">Add Kid</h2>
+                <h2 className="text-xl font-bold mb-4">Kids</h2>
                 <input className="input" placeholder="Kid name" value={newKidName} onChange={e => setNewKidName(e.target.value)} />
-                <button className="btn-primary mt-4" onClick={addKid}>Add Kid</button>
+                <button className="btn-primary mt-4" onClick={async () => { await supabase.from("kids").insert({ name: newKidName, family_id:family.id, user_id }); setNewKidName(""); load(); }}>Add Kid</button>
 
-                <h3 className="mt-6 font-semibold mb-2">Kids</h3>
-                <ul className="space-y-2">
+                <ul className="space-y-2 mt-4">
                     {kids.map(k => (
                         <li key={k.id} className="flex justify-between items-center">
-                            <span>{k.name}</span>
-                            <button className="btn-success" onClick={() => removeKid(k.id)}>Delete</button>
+                            {editingKidId === k.id ? (
+                                <>
+                                    <input value={editKidName} onChange={e => setEditKidName(e.target.value)} className="input" />
+                                    <button className="btn-success" onClick={() => updateKid(k.id)}><FaSave /></button>
+                                </>
+                            ) : (
+                                <>
+                                    <span>{k.name}</span>
+                                    <div className="flex gap-2">
+                                        <button className="btn-warning" onClick={() => { setEditingKidId(k.id); setEditKidName(k.name); }}><FaEdit /></button>
+                                        <button className="btn-danger" onClick={async () => { await supabase.from("kids").delete().eq("id", k.id); load(); }}>Delete</button>
+                                    </div>
+                                </>
+                            )}
                         </li>
                     ))}
                 </ul>
             </Card>
 
             <Card>
-                <h2 className="text-xl font-bold mb-4">Create Chore</h2>
-                <input className="input" placeholder="Chore title" value={choreTitle} onChange={e => setChoreTitle(e.target.value)} />
-                <input type="number" className="input mt-3" value={choreCoins} onChange={e => setChoreCoins(+e.target.value)} />
-                <label className="flex items-center gap-2 mt-3">
-                    <input type="checkbox" checked={daily} onChange={e => setDaily(e.target.checked)} />
-                    Daily chore
-                </label>
-                <button className="btn-primary mt-4" onClick={addChore}>Add Chore</button>
+                <h2 className="text-xl font-bold mb-4">Chores</h2>
+                {chores.map(ch => (
+                    <div key={ch.id} className="flex justify-between items-center mb-2">
+                        {editingChoreId === ch.id ? (
+                            <>
+                                <input value={editChoreTitle} onChange={e => setEditChoreTitle(e.target.value)} className="input" />
+                                <input type="number" value={editChoreCoins} onChange={e => setEditChoreCoins(+e.target.value)} className="input w-20 ml-2" />
+                                <button className="btn-success ml-2" onClick={() => updateChore(ch.id)}><FaSave /></button>
+                            </>
+                        ) : (
+                            <>
+                                <span>{ch.title} ({ch.coins} <FaCoins className="inline" />)</span>
+                                <button className="btn-warning" onClick={() => { setEditingChoreId(ch.id); setEditChoreTitle(ch.title); setEditChoreCoins(ch.coins); }}><FaEdit /></button>
+                            </>
+                        )}
+                    </div>
+                ))}
             </Card>
 
             <Card>
-                <h2 className="text-xl font-bold mb-4">Reward Store</h2>
-                <input className="input" placeholder="Reward title" value={rewardTitle} onChange={e => setRewardTitle(e.target.value)} />
-                <input type="number" className="input mt-3" value={rewardCoins} onChange={e => setRewardCoins(+e.target.value)} />
-                <button className="btn-success mt-4" onClick={addReward}>Add Reward</button>
+                <h2 className="text-xl font-bold mb-4">Rewards</h2>
+                {rewards.map(r => (
+                    <div key={r.id} className="flex justify-between items-center mb-2">
+                        {editingRewardId === r.id ? (
+                            <>
+                                <input value={editRewardTitle} onChange={e => setEditRewardTitle(e.target.value)} className="input" />
+                                <input type="number" value={editRewardCoins} onChange={e => setEditRewardCoins(+e.target.value)} className="input w-20 ml-2" />
+                                <button className="btn-success ml-2" onClick={() => updateReward(r.id)}><FaSave /></button>
+                            </>
+                        ) : (
+                            <>
+                                <span>{r.title} ({r.cost} <FaCoins className="inline" />)</span>
+                                <button className="btn-warning" onClick={() => { setEditingRewardId(r.id); setEditRewardTitle(r.title); setEditRewardCoins(r.cost); }}><FaEdit /></button>
+                            </>
+                        )}
+                    </div>
+                ))}
             </Card>
-
             <Card>
                 <h2 className="font-semibold mb-3">Pending Approvals</h2>
                 <ul className="space-y-2">
