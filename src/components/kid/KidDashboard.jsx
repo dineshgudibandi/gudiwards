@@ -16,7 +16,7 @@ export function KidDashboard({ kid, family }) {
 
     useEffect(() => {
         load();
-    }, [kid]);
+    }, [kid, family]);
 
     async function load() {
         const today = new Date().toISOString().split("T")[0];
@@ -95,7 +95,6 @@ export function KidDashboard({ kid, family }) {
         <div className="space-y-6">
             <Card>
                 <div className="text-center">
-                    <p className="text-2xl font-bold">{kid.name}</p>
                     <p className="text-5xl font-extrabold text-yellow-500">{coins} <FaCoins className="inline" /></p>
                 </div>
             </Card>
