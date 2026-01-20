@@ -125,7 +125,7 @@ export default function App() {
     const handleLogout = async () => {
         try {
             await supabase.auth.signOut();
-            window.location.href = '/';
+            window.location.href = '/gudiwards/';
         } catch (error) {
             console.error('Logout error:', error.message);
         }
