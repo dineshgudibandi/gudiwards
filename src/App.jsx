@@ -32,7 +32,7 @@ export default function App() {
         try {
             const { data, error } = await supabase.auth.signInWithOAuth({
                 provider: "google",
-                options: { redirectTo: window.location.origin }
+                options: { redirectTo: 'https://dineshgudibandi.github.io/gudiwards/' }
             });
             if (error) console.error("Login error:", error.message);
         } catch (err) {
@@ -98,9 +98,18 @@ export default function App() {
 
     if (!user) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center">
-                <button onClick={signInWithGoogle} className="btn-primary">Sign in with Google</button>
+            <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 p-6">
+                <div className="max-w-3xl w-full text-center space-y-6">
+                    <h1 className="text-4xl font-bold text-purple-800">Gudiwards (Rewards for being Good)</h1>
+                    <p className="text-lg text-gray-700">Help your kids learn responsibility and manage their chores. Earn coins for completing tasks and redeem them for rewards!</p>
+                    <img src="./img/logo.png" alt="Gudiwards" className="mx-auto w-48 h-48 rounded-full shadow-lg" />
+                    <button onClick={signInWithGoogle} className="btn-primary text-white px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition">Sign in with Google</button>
+                    <div className="text-gray-600 mt-4">
+
+                    </div>
+                </div>
             </div>
+
         );
     }
     const toggleEditGroup = (id) => {
