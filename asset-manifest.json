@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/gudiwards/static/css/main.eab47e5d.css",
-    "main.js": "/gudiwards/static/js/main.24b78590.js",
+    "main.js": "/gudiwards/static/js/main.d6cb4cb3.js",
     "index.html": "/gudiwards/index.html",
     "main.eab47e5d.css.map": "/gudiwards/static/css/main.eab47e5d.css.map",
-    "main.24b78590.js.map": "/gudiwards/static/js/main.24b78590.js.map"
+    "main.d6cb4cb3.js.map": "/gudiwards/static/js/main.d6cb4cb3.js.map"
   },
   "entrypoints": [
     "static/css/main.eab47e5d.css",
-    "static/js/main.24b78590.js"
+    "static/js/main.d6cb4cb3.js"
   ]
 }
